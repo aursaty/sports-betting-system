@@ -1,0 +1,222 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: sbs-nginx
+    ports:
+      - ${NGINX_PORT}:80
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - sports-betting-system-server-1
+      - sports-betting-system-server-2
+      - sports-betting-system-server-3
+    networks:
+      - sports-betting-system-network
+    restart: unless-stopped
+
+  database-master:
+    image: postgres:18
+    container_name: sbs-db-master
+    environment:
+      POSTGRES_USER: ${MASTER_DATABASE_USER}
+      POSTGRES_PASSWORD: ${MASTER_DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+      REPLICA_DATABASE_USER: ${REPLICA_DATABASE_USER}
+      REPLICA_DATABASE_PASSWORD: ${REPLICA_DATABASE_PASSWORD}
+      DATABASE_READER_ROLE_NAME: ${DATABASE_READER_ROLE_NAME}
+      DATABASE_READER_ROLE_PASSWORD: ${DATABASE_READER_ROLE_PASSWORD}
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+    command: |
+      postgres
+      -c wal_level=replica
+      -c hot_standby=on
+      -c max_wal_senders=10
+      -c max_replication_slots=10
+      -c hot_standby_feedback=on
+      -c listen_addresses='*'
+    volumes:
+      - database-master-data:/var/lib/postgresql
+      - ./init-master.sh:/docker-entrypoint-initdb.d/init-master.sh
+    networks:
+      - sports-betting-system-network
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${MASTER_DATABASE_USER} -d ${DATABASE_NAME}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  database-replica-1:
+    image: postgres:18
+    container_name: sbs-db-replica-1
+    environment:
+      PGDATA: /var/lib/postgresql/18/main
+      PGPASSWORD: ${REPLICA_DATABASE_PASSWORD}
+    command: |
+      bash -c '
+      if [ -d "/var/lib/postgresql/18/main" ]; then
+        rm -rf /var/lib/postgresql/18/main/*
+      fi
+      mkdir -p /var/lib/postgresql/18/main
+      chown -R postgres:postgres /var/lib/postgresql
+      echo "Waiting for master to be ready..."
+      sleep 10
+      until gosu postgres bash -c "PGPASSWORD=${REPLICA_DATABASE_PASSWORD} pg_basebackup --pgdata=/var/lib/postgresql/18/main --format=p --write-recovery-conf --slot=replication_slot_1 --host=database-master --port=5432 --username=${REPLICA_DATABASE_USER} --progress --verbose"
+      do
+        echo "Waiting for primary to connect..."
+        sleep 2s
+      done
+      echo "Backup done, starting replica..."
+      chmod 0700 /var/lib/postgresql/18/main
+      chown -R postgres:postgres /var/lib/postgresql
+      exec gosu postgres postgres -c hot_standby=on -c listen_addresses="*"
+      '
+    volumes:
+      - database-replica-1-data:/var/lib/postgresql
+    depends_on:
+      database-master:
+        condition: service_healthy
+    networks:
+      - sports-betting-system-network
+    restart: unless-stopped
+
+  database-replica-2:
+    image: postgres:18
+    container_name: sbs-db-replica-2
+    environment:
+      PGDATA: /var/lib/postgresql/18/main
+      PGPASSWORD: ${REPLICA_DATABASE_PASSWORD}
+    command: |
+      bash -c '
+      if [ -d "/var/lib/postgresql/18/main" ]; then
+        rm -rf /var/lib/postgresql/18/main/*
+      fi
+      mkdir -p /var/lib/postgresql/18/main
+      chown -R postgres:postgres /var/lib/postgresql
+      echo "Waiting for master to be ready..."
+      sleep 10
+      until gosu postgres bash -c "PGPASSWORD=${REPLICA_DATABASE_PASSWORD} pg_basebackup --pgdata=/var/lib/postgresql/18/main --format=p --write-recovery-conf --slot=replication_slot_2 --host=database-master --port=5432 --username=${REPLICA_DATABASE_USER} --progress --verbose"
+      do
+        echo "Waiting for primary to connect..."
+        sleep 2s
+      done
+      echo "Backup done, starting replica..."
+      chmod 0700 /var/lib/postgresql/18/main
+      chown -R postgres:postgres /var/lib/postgresql
+      exec gosu postgres postgres -c hot_standby=on -c listen_addresses="*"
+      '
+    volumes:
+      - database-replica-2-data:/var/lib/postgresql
+    depends_on:
+      database-master:
+        condition: service_healthy
+    networks:
+      - sports-betting-system-network
+    restart: unless-stopped
+
+  database-replica-3:
+    image: postgres:18
+    container_name: sbs-db-replica-3
+    environment:
+      PGDATA: /var/lib/postgresql/18/main
+      PGPASSWORD: ${REPLICA_DATABASE_PASSWORD}
+    command: |
+      bash -c '
+      if [ -d "/var/lib/postgresql/18/main" ]; then
+        rm -rf /var/lib/postgresql/18/main/*
+      fi
+      mkdir -p /var/lib/postgresql/18/main
+      chown -R postgres:postgres /var/lib/postgresql
+      echo "Waiting for master to be ready..."
+      sleep 10
+      until gosu postgres bash -c "PGPASSWORD=${REPLICA_DATABASE_PASSWORD} pg_basebackup --pgdata=/var/lib/postgresql/18/main --format=p --write-recovery-conf --slot=replication_slot_3 --host=database-master --port=5432 --username=${REPLICA_DATABASE_USER} --progress --verbose"
+      do
+        echo "Waiting for primary to connect..."
+        sleep 2s
+      done
+      echo "Backup done, starting replica..."
+      chmod 0700 /var/lib/postgresql/18/main
+      chown -R postgres:postgres /var/lib/postgresql
+      exec gosu postgres postgres -c hot_standby=on -c listen_addresses="*"
+      '
+    volumes:
+      - database-replica-3-data:/var/lib/postgresql
+    depends_on:
+      database-master:
+        condition: service_healthy
+    networks:
+      - sports-betting-system-network
+    restart: unless-stopped
+
+  sports-betting-system-server-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sbs-server-1
+    environment:
+      MASTER_DATABASE_URL: postgresql://${MASTER_DATABASE_USER}:${MASTER_DATABASE_PASSWORD}@database-master:5432/${DATABASE_NAME}
+      REPLICA_DATABASE_URL: postgresql://${REPLICA_DATABASE_USER}:${REPLICA_DATABASE_PASSWORD}@database-replica-1:5432/${DATABASE_NAME}
+      SERVER_PORT: ${SERVER_PORT}
+      SERVER_ID: 1
+    volumes:
+      - ./src:/app/src
+    depends_on:
+      database-master:
+        condition: service_healthy
+      database-replica-1:
+        condition: service_started
+    networks:
+      - sports-betting-system-network
+    restart: unless-stopped
+
+  sports-betting-system-server-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sbs-server-2
+    environment:
+      MASTER_DATABASE_URL: postgresql://${MASTER_DATABASE_USER}:${MASTER_DATABASE_PASSWORD}@database-master:5432/${DATABASE_NAME}
+      REPLICA_DATABASE_URL: postgresql://${REPLICA_DATABASE_USER}:${REPLICA_DATABASE_PASSWORD}@database-replica-2:5432/${DATABASE_NAME}
+      SERVER_PORT: ${SERVER_PORT}
+      SERVER_ID: 2
+    volumes:
+      - ./src:/app/src
+    depends_on:
+      database-master:
+        condition: service_healthy
+      database-replica-2:
+        condition: service_started
+    networks:
+      - sports-betting-system-network
+    restart: unless-stopped
+
+  sports-betting-system-server-3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sbs-server-3
+    environment:
+      MASTER_DATABASE_URL: postgresql://${MASTER_DATABASE_USER}:${MASTER_DATABASE_PASSWORD}@database-master:5432/${DATABASE_NAME}
+      REPLICA_DATABASE_URL: postgresql://${REPLICA_DATABASE_USER}:${REPLICA_DATABASE_PASSWORD}@database-replica-3:5432/${DATABASE_NAME}
+      SERVER_PORT: ${SERVER_PORT}
+      SERVER_ID: 3
+    volumes:
+      - ./src:/app/src
+    depends_on:
+      database-master:
+        condition: service_healthy
+      database-replica-3:
+        condition: service_started
+    networks:
+      - sports-betting-system-network
+    restart: unless-stopped
+
+networks:
+  sports-betting-system-network:
+    driver: bridge
+
+volumes:
+  database-master-data:
+  database-replica-1-data:
+  database-replica-2-data:
+  database-replica-3-data:
