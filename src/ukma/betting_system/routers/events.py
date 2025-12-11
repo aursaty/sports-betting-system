@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from ukma.betting_system.db import get_db
+from ukma.betting_system.db import get_db_replica as get_db, get_db_master
 from ukma.betting_system.models import User, Event
 from ukma.betting_system.schemas import EventCreate, EventUpdate, EventResponse
 from ukma.betting_system.core import decode_access_token
@@ -50,7 +50,7 @@ async def list_events(db: AsyncSession = Depends(get_db)):
 async def create_event(
     event_data: EventCreate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db_master)
 ):
     """Create a new betting event (admin only)."""
     # Check if user is admin
@@ -96,7 +96,7 @@ async def update_event(
     event_id: int,
     event_data: EventUpdate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db_master)
 ):
     """Update an event (admin only)."""
     if not current_user.is_admin:
@@ -129,7 +129,7 @@ async def update_event(
 async def delete_event(
     event_id: int,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db_master)
 ):
     """Delete an event (admin only)."""
     if not current_user.is_admin:

@@ -2,26 +2,54 @@ import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
-# Database URL - Use environment variable or construct from individual vars
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    f"postgresql+asyncpg://{os.getenv('MASTER_DATABASE_USER', 'postgres')}:{os.getenv('MASTER_DATABASE_PASSWORD', 'postgres')}@database-master:5432/{os.getenv('DATABASE_NAME', 'betting_system')}"
+# Master Database URL
+DATABASE_URL_MASTER = os.getenv(
+    "DATABASE_URL_MASTER",
+    f"postgresql+asyncpg://{os.getenv('MASTER_DATABASE_USER', 'sports-betting-system-master-user')}:{os.getenv('MASTER_DATABASE_PASSWORD', '1528087d37efcf5b24f08ca0a3019677')}@database-master:5432/{os.getenv('DATABASE_NAME', 'sports-betting-system')}"
 )
 
-# Create async engine
-engine = create_async_engine(
-    DATABASE_URL,
+# Replica Database URL
+DATABASE_URL_REPLICA = os.getenv(
+    "DATABASE_URL_REPLICA",
+    f"postgresql+asyncpg://{os.getenv('REPLICA_DATABASE_USER', 'sports-betting-system-replica-user')}:{os.getenv('REPLICA_DATABASE_PASSWORD', '4fb708f3ea0411d6d9672fbd6f1e7a66')}@database-replica-1:5432/{os.getenv('DATABASE_NAME', 'sports-betting-system')}"
+)
+
+# Create async engines
+engine_master = create_async_engine(
+    DATABASE_URL_MASTER,
     echo=False,
     future=True,
 )
 
-# Create async session factory
-async_session_maker = sessionmaker(
-    engine, class_=AsyncSession, expire_on_commit=False
+engine_replica = create_async_engine(
+    DATABASE_URL_REPLICA,
+    echo=False,
+    future=True,
+)
+
+# Create async session factories
+SessionLocalMaster = sessionmaker(
+    engine_master, class_=AsyncSession, expire_on_commit=False
+)
+
+SessionLocalReplica = sessionmaker(
+    engine_replica, class_=AsyncSession, expire_on_commit=False
 )
 
 
+async def get_db_master():
+    """Dependency to get a master database session (Read/Write)."""
+    async with SessionLocalMaster() as session:
+        yield session
+
+
+async def get_db_replica():
+    """Dependency to get a replica database session (Read-Only)."""
+    async with SessionLocalReplica() as session:
+        yield session
+
+
 async def get_db():
-    """Dependency to get a database session."""
-    async with async_session_maker() as session:
+    """Default dependency (Master) for backward compatibility."""
+    async with SessionLocalMaster() as session:
         yield session

@@ -17,6 +17,7 @@ class UserResponse(BaseModel):
     id: int
     email: str
     is_admin: bool
+    balance: float
     created_at: datetime
 
     class Config:
@@ -52,6 +53,23 @@ class EventResponse(BaseModel):
     team_b: str
     odds_a: float
     odds_b: float
+    status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class BetCreate(BaseModel):
+    event_id: int
+    amount: float = Field(..., gt=0)
+
+
+class BetResponse(BaseModel):
+    id: int
+    user_id: int
+    event_id: int
+    amount: float
     status: str
     created_at: datetime
 

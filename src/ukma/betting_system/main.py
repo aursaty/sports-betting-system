@@ -3,15 +3,15 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from ukma.betting_system.db import engine
+from ukma.betting_system.db import engine_master
 from ukma.betting_system.models import Base
-from ukma.betting_system.routers import auth, events
+from ukma.betting_system.routers import auth, events, bets
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize database tables on startup."""
-    async with engine.begin() as conn:
+    async with engine_master.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     print("Database tables created/verified")
     yield
@@ -38,6 +38,7 @@ app.add_middleware(
 # Include routers
 app.include_router(auth.router)
 app.include_router(events.router)
+app.include_router(bets.router)
 
 
 @app.get("/health")

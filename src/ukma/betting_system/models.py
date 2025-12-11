@@ -13,6 +13,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    balance: Mapped[float] = mapped_column(Float, default=0.0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
@@ -26,4 +27,15 @@ class Event(Base):
     odds_a: Mapped[float] = mapped_column(Float)
     odds_b: Mapped[float] = mapped_column(Float)
     status: Mapped[str] = mapped_column(String(50), default="open", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class Bet(Base):
+    __tablename__ = "bets"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(index=True)
+    event_id: Mapped[int] = mapped_column(index=True)
+    amount: Mapped[float] = mapped_column(Float)
+    status: Mapped[str] = mapped_column(String(50), default="pending")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from datetime import timedelta
 
-from ukma.betting_system.db import get_db
+from ukma.betting_system.db import get_db_replica, get_db_master
 from ukma.betting_system.models import User
 from ukma.betting_system.schemas import UserCreate, UserLogin, UserResponse, TokenResponse
 from ukma.betting_system.core import (
@@ -17,7 +17,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def signup(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
+async def signup(user_data: UserCreate, db: AsyncSession = Depends(get_db_master)):
     """Create a new user account."""
     # Check if user already exists
     result = await db.execute(select(User).where(User.email == user_data.email))
@@ -43,7 +43,7 @@ async def signup(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
+async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db_replica)):
     """Authenticate user and return JWT token."""
     # Find user by email
     result = await db.execute(select(User).where(User.email == credentials.email))
