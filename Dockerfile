@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 
-WORKDIR /app/src
+WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
     gcc \
@@ -11,7 +11,9 @@ COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY src /app/src
+COPY src ./src
+
+WORKDIR /app/src
 
 EXPOSE 8000
 

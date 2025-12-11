@@ -152,10 +152,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - .env
     container_name: sbs-server-1
     environment:
-      MASTER_DATABASE_URL: postgresql://${MASTER_DATABASE_USER}:${MASTER_DATABASE_PASSWORD}@database-master:5432/${DATABASE_NAME}
-      REPLICA_DATABASE_URL: postgresql://${REPLICA_DATABASE_USER}:${REPLICA_DATABASE_PASSWORD}@database-replica-1:5432/${DATABASE_NAME}
+      MASTER_DATABASE_URL: postgresql+asyncpg://${MASTER_DATABASE_USER}:${MASTER_DATABASE_PASSWORD}@database-master:5432/${DATABASE_NAME}
+      REPLICA_DATABASE_URL: postgresql+asyncpg://${REPLICA_DATABASE_USER}:${REPLICA_DATABASE_PASSWORD}@database-replica-1:5432/${DATABASE_NAME}
       SERVER_PORT: ${SERVER_PORT}
       SERVER_ID: 1
     volumes:
@@ -173,10 +175,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - .env
     container_name: sbs-server-2
     environment:
-      MASTER_DATABASE_URL: postgresql://${MASTER_DATABASE_USER}:${MASTER_DATABASE_PASSWORD}@database-master:5432/${DATABASE_NAME}
-      REPLICA_DATABASE_URL: postgresql://${REPLICA_DATABASE_USER}:${REPLICA_DATABASE_PASSWORD}@database-replica-2:5432/${DATABASE_NAME}
+      MASTER_DATABASE_URL: postgresql+asyncpg://${MASTER_DATABASE_USER}:${MASTER_DATABASE_PASSWORD}@database-master:5432/${DATABASE_NAME}
+      REPLICA_DATABASE_URL: postgresql+asyncpg://${REPLICA_DATABASE_USER}:${REPLICA_DATABASE_PASSWORD}@database-replica-2:5432/${DATABASE_NAME}
       SERVER_PORT: ${SERVER_PORT}
       SERVER_ID: 2
     volumes:
@@ -194,10 +198,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - .env
     container_name: sbs-server-3
     environment:
-      MASTER_DATABASE_URL: postgresql://${MASTER_DATABASE_USER}:${MASTER_DATABASE_PASSWORD}@database-master:5432/${DATABASE_NAME}
-      REPLICA_DATABASE_URL: postgresql://${REPLICA_DATABASE_USER}:${REPLICA_DATABASE_PASSWORD}@database-replica-3:5432/${DATABASE_NAME}
+      MASTER_DATABASE_URL: postgresql+asyncpg://${MASTER_DATABASE_USER}:${MASTER_DATABASE_PASSWORD}@database-master:5432/${DATABASE_NAME}
+      REPLICA_DATABASE_URL: postgresql+asyncpg://${REPLICA_DATABASE_USER}:${REPLICA_DATABASE_PASSWORD}@database-replica-3:5432/${DATABASE_NAME}
       SERVER_PORT: ${SERVER_PORT}
       SERVER_ID: 3
     volumes:
