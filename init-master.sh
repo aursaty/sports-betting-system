@@ -20,6 +20,36 @@ if [ -z "$DATABASE_READER_ROLE_NAME" ] || [ -z "$DATABASE_READER_ROLE_PASSWORD" 
     SKIP_READER=true
 fi
 
+# Configure pg_hba.conf FIRST, before creating users
+echo "Configuring pg_hba.conf for replication..."
+cat > "$PGDATA/pg_hba.conf" <<EOF
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+# "local" is for Unix domain socket connections only
+local   all             all                                     trust
+# IPv4 local connections:
+host    all             all             127.0.0.1/32            scram-sha-256
+# IPv6 local connections:
+host    all             all             ::1/128                 scram-sha-256
+
+# Replication connections - MUST come before general rules
+host    replication     ${REPLICA_DATABASE_USER}     0.0.0.0/0               md5
+host    replication     all                          0.0.0.0/0               md5
+
+# Database connections for all users from any host
+host    all             all                          0.0.0.0/0               md5
+EOF
+
+echo "pg_hba.conf configured:"
+cat "$PGDATA/pg_hba.conf"
+
+# Reload configuration
+echo "Reloading PostgreSQL configuration..."
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -c "SELECT pg_reload_conf();"
+
+# Give PostgreSQL a moment to apply the config
+sleep 2
+
 echo "Creating replication user..."
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
     DO \$\$
@@ -102,21 +132,7 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     \$\$;
 EOSQL
 
-echo "Configuring pg_hba.conf for replication..."
-sed -i '/host replication/d' "$PGDATA/pg_hba.conf"
-
-cat >> "$PGDATA/pg_hba.conf" <<EOF
-
-# Replication connections
-host    replication     ${REPLICA_DATABASE_USER}     0.0.0.0/0               md5
-host    replication     all                          0.0.0.0/0               md5
-
-# Database connections for all users
-host    all             all                          0.0.0.0/0               scram-sha-256
-EOF
-
-echo "pg_hba.conf updated successfully"
-
+# Final reload to ensure everything is applied
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -c "SELECT pg_reload_conf();"
 
 echo "============================================"
@@ -129,3 +145,7 @@ if [ "$SKIP_READER" != "true" ]; then
     echo "  - Reader role: ${DATABASE_READER_ROLE_NAME}"
 fi
 echo "============================================"
+
+# Test replication connection
+echo "Testing replication connection..."
+psql -v ON_ERROR_STOP=0 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -c "SELECT * FROM pg_hba_file_rules WHERE database = '{replication}';"

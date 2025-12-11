@@ -52,6 +52,8 @@ services:
     environment:
       PGDATA: /var/lib/postgresql/18/main
       PGPASSWORD: ${REPLICA_DATABASE_PASSWORD}
+      REPLICA_DATABASE_USER: ${REPLICA_DATABASE_USER}
+      REPLICA_DATABASE_PASSWORD: ${REPLICA_DATABASE_PASSWORD}
     command: |
       bash -c '
       if [ -d "/var/lib/postgresql/18/main" ]; then
@@ -59,13 +61,29 @@ services:
       fi
       mkdir -p /var/lib/postgresql/18/main
       chown -R postgres:postgres /var/lib/postgresql
+
+      # Create .pgpass file for authentication
+      echo "database-master:5432:*:${REPLICA_DATABASE_USER}:${REPLICA_DATABASE_PASSWORD}" > /var/lib/postgresql/.pgpass
+      chown postgres:postgres /var/lib/postgresql/.pgpass
+      chmod 0600 /var/lib/postgresql/.pgpass
+
       echo "Waiting for master to be ready..."
       sleep 10
-      until gosu postgres bash -c "PGPASSWORD=${REPLICA_DATABASE_PASSWORD} pg_basebackup --pgdata=/var/lib/postgresql/18/main --format=p --write-recovery-conf --slot=replication_slot_1 --host=database-master --port=5432 --username=${REPLICA_DATABASE_USER} --progress --verbose --no-password"
+
+      echo "Testing connection to master..."
+      until gosu postgres pg_isready -h database-master -p 5432 -U ${REPLICA_DATABASE_USER}
       do
-        echo "Waiting for primary to connect..."
+        echo "Master not ready, waiting..."
         sleep 2s
       done
+
+      echo "Master is ready, starting pg_basebackup..."
+      until gosu postgres pg_basebackup --pgdata=/var/lib/postgresql/18/main --format=p --write-recovery-conf --slot=replication_slot_1 --host=database-master --port=5432 --username=${REPLICA_DATABASE_USER} --progress --verbose
+      do
+        echo "pg_basebackup failed, retrying..."
+        sleep 2s
+      done
+
       echo "Backup done, starting replica..."
       chmod 0700 /var/lib/postgresql/18/main
       chown -R postgres:postgres /var/lib/postgresql
@@ -86,6 +104,8 @@ services:
     environment:
       PGDATA: /var/lib/postgresql/18/main
       PGPASSWORD: ${REPLICA_DATABASE_PASSWORD}
+      REPLICA_DATABASE_USER: ${REPLICA_DATABASE_USER}
+      REPLICA_DATABASE_PASSWORD: ${REPLICA_DATABASE_PASSWORD}
     command: |
       bash -c '
       if [ -d "/var/lib/postgresql/18/main" ]; then
@@ -93,13 +113,29 @@ services:
       fi
       mkdir -p /var/lib/postgresql/18/main
       chown -R postgres:postgres /var/lib/postgresql
+
+      # Create .pgpass file for authentication
+      echo "database-master:5432:*:${REPLICA_DATABASE_USER}:${REPLICA_DATABASE_PASSWORD}" > /var/lib/postgresql/.pgpass
+      chown postgres:postgres /var/lib/postgresql/.pgpass
+      chmod 0600 /var/lib/postgresql/.pgpass
+
       echo "Waiting for master to be ready..."
       sleep 10
-      until gosu postgres bash -c "PGPASSWORD=${REPLICA_DATABASE_PASSWORD} pg_basebackup --pgdata=/var/lib/postgresql/18/main --format=p --write-recovery-conf --slot=replication_slot_2 --host=database-master --port=5432 --username=${REPLICA_DATABASE_USER} --progress --verbose --no-password"
+
+      echo "Testing connection to master..."
+      until gosu postgres pg_isready -h database-master -p 5432 -U ${REPLICA_DATABASE_USER}
       do
-        echo "Waiting for primary to connect..."
+        echo "Master not ready, waiting..."
         sleep 2s
       done
+
+      echo "Master is ready, starting pg_basebackup..."
+      until gosu postgres pg_basebackup --pgdata=/var/lib/postgresql/18/main --format=p --write-recovery-conf --slot=replication_slot_2 --host=database-master --port=5432 --username=${REPLICA_DATABASE_USER} --progress --verbose
+      do
+        echo "pg_basebackup failed, retrying..."
+        sleep 2s
+      done
+
       echo "Backup done, starting replica..."
       chmod 0700 /var/lib/postgresql/18/main
       chown -R postgres:postgres /var/lib/postgresql
@@ -120,6 +156,8 @@ services:
     environment:
       PGDATA: /var/lib/postgresql/18/main
       PGPASSWORD: ${REPLICA_DATABASE_PASSWORD}
+      REPLICA_DATABASE_USER: ${REPLICA_DATABASE_USER}
+      REPLICA_DATABASE_PASSWORD: ${REPLICA_DATABASE_PASSWORD}
     command: |
       bash -c '
       if [ -d "/var/lib/postgresql/18/main" ]; then
@@ -127,13 +165,29 @@ services:
       fi
       mkdir -p /var/lib/postgresql/18/main
       chown -R postgres:postgres /var/lib/postgresql
+
+      # Create .pgpass file for authentication
+      echo "database-master:5432:*:${REPLICA_DATABASE_USER}:${REPLICA_DATABASE_PASSWORD}" > /var/lib/postgresql/.pgpass
+      chown postgres:postgres /var/lib/postgresql/.pgpass
+      chmod 0600 /var/lib/postgresql/.pgpass
+
       echo "Waiting for master to be ready..."
       sleep 10
-      until gosu postgres bash -c "PGPASSWORD=${REPLICA_DATABASE_PASSWORD} pg_basebackup --pgdata=/var/lib/postgresql/18/main --format=p --write-recovery-conf --slot=replication_slot_3 --host=database-master --port=5432 --username=${REPLICA_DATABASE_USER} --progress --verbose --no-password"
+
+      echo "Testing connection to master..."
+      until gosu postgres pg_isready -h database-master -p 5432 -U ${REPLICA_DATABASE_USER}
       do
-        echo "Waiting for primary to connect..."
+        echo "Master not ready, waiting..."
         sleep 2s
       done
+
+      echo "Master is ready, starting pg_basebackup..."
+      until gosu postgres pg_basebackup --pgdata=/var/lib/postgresql/18/main --format=p --write-recovery-conf --slot=replication_slot_3 --host=database-master --port=5432 --username=${REPLICA_DATABASE_USER} --progress --verbose
+      do
+        echo "pg_basebackup failed, retrying..."
+        sleep 2s
+      done
+
       echo "Backup done, starting replica..."
       chmod 0700 /var/lib/postgresql/18/main
       chown -R postgres:postgres /var/lib/postgresql
