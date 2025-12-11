@@ -108,8 +108,8 @@ sed -i '/host replication/d' "$PGDATA/pg_hba.conf"
 cat >> "$PGDATA/pg_hba.conf" <<EOF
 
 # Replication connections
-host    replication     ${REPLICA_DATABASE_USER}     0.0.0.0/0               scram-sha-256
-host    replication     all                          0.0.0.0/0               scram-sha-256
+host    replication     ${REPLICA_DATABASE_USER}     0.0.0.0/0               md5
+host    replication     all                          0.0.0.0/0               md5
 
 # Database connections for all users
 host    all             all                          0.0.0.0/0               scram-sha-256

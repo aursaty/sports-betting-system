@@ -61,7 +61,7 @@ services:
       chown -R postgres:postgres /var/lib/postgresql
       echo "Waiting for master to be ready..."
       sleep 10
-      until gosu postgres bash -c "PGPASSWORD=${REPLICA_DATABASE_PASSWORD} pg_basebackup --pgdata=/var/lib/postgresql/18/main --format=p --write-recovery-conf --slot=replication_slot_1 --host=database-master --port=5432 --username=${REPLICA_DATABASE_USER} --progress --verbose"
+      until gosu postgres bash -c "PGPASSWORD=${REPLICA_DATABASE_PASSWORD} pg_basebackup --pgdata=/var/lib/postgresql/18/main --format=p --write-recovery-conf --slot=replication_slot_1 --host=database-master --port=5432 --username=${REPLICA_DATABASE_USER} --progress --verbose --no-password"
       do
         echo "Waiting for primary to connect..."
         sleep 2s
@@ -95,7 +95,7 @@ services:
       chown -R postgres:postgres /var/lib/postgresql
       echo "Waiting for master to be ready..."
       sleep 10
-      until gosu postgres bash -c "PGPASSWORD=${REPLICA_DATABASE_PASSWORD} pg_basebackup --pgdata=/var/lib/postgresql/18/main --format=p --write-recovery-conf --slot=replication_slot_2 --host=database-master --port=5432 --username=${REPLICA_DATABASE_USER} --progress --verbose"
+      until gosu postgres bash -c "PGPASSWORD=${REPLICA_DATABASE_PASSWORD} pg_basebackup --pgdata=/var/lib/postgresql/18/main --format=p --write-recovery-conf --slot=replication_slot_2 --host=database-master --port=5432 --username=${REPLICA_DATABASE_USER} --progress --verbose --no-password"
       do
         echo "Waiting for primary to connect..."
         sleep 2s
@@ -129,7 +129,7 @@ services:
       chown -R postgres:postgres /var/lib/postgresql
       echo "Waiting for master to be ready..."
       sleep 10
-      until gosu postgres bash -c "PGPASSWORD=${REPLICA_DATABASE_PASSWORD} pg_basebackup --pgdata=/var/lib/postgresql/18/main --format=p --write-recovery-conf --slot=replication_slot_3 --host=database-master --port=5432 --username=${REPLICA_DATABASE_USER} --progress --verbose"
+      until gosu postgres bash -c "PGPASSWORD=${REPLICA_DATABASE_PASSWORD} pg_basebackup --pgdata=/var/lib/postgresql/18/main --format=p --write-recovery-conf --slot=replication_slot_3 --host=database-master --port=5432 --username=${REPLICA_DATABASE_USER} --progress --verbose --no-password"
       do
         echo "Waiting for primary to connect..."
         sleep 2s
